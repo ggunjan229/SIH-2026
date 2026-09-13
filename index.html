@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Worker Allocation</title>
+<style>
+  :root {
+    --bg: #EEF1EC;
+    --panel: #FFFFFF;
+    --ink: #17241D;
+    --ink-soft: #4B584F;
+    --line: #D7DBD2;
+    --amber: #E2A33B;
+    --amber-ink: #5C3E0C;
+    --teal: #2F7A6D;
+    --teal-soft: #E3EFEC;
+    --danger: #B4432F;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    background: var(--panel);
+  }
+  header h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+  #status { font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  #status .dot { width: 7px; height: 7px; border-radius: 50%; background: #999; display: inline-block; }
+  #status.ok .dot { background: var(--teal); }
+  #status.down .dot { background: var(--danger); }
+ 
+  main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    padding: 24px 32px 48px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+ 
+  section.panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  h2 { font-size: 13px; font-weight: 650; margin: 0 0 12px; color: var(--ink); }
+  .field-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  label { font-size: 11.5px; color: var(--ink-soft); }
+  input, select {
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 1px;
+  }
+ 
+  .candidate-card {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .candidate-card .remove {
+    position: absolute; top: 6px; right: 6px;
+    background: none; border: none; color: var(--ink-soft);
+    font-size: 15px; cursor: pointer; line-height: 1; padding: 2px 5px;
+  }
+  .candidate-card .remove:hover { color: var(--danger); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid2 .field { margin-bottom: 6px; }
+ 
+  button {
+    font: inherit; cursor: pointer; border-radius: 4px; border: 1px solid transparent;
+    padding: 9px 14px; font-size: 13px; font-weight: 550;
+  }
+  .btn-primary { background: var(--amber); color: var(--amber-ink); width: 100%; margin-top: 6px; }
+  .btn-primary:hover { filter: brightness(0.96); }
+  .btn-secondary { background: transparent; border-color: var(--line); color: var(--ink); width: 100%; }
+  .btn-secondary:hover { background: #F5F6F2; }
+  .btn-add { background: var(--teal-soft); color: var(--teal); width: 100%; margin-bottom: 14px; }
+ 
+  #results .empty {
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    padding: 40px 10px;
+    text-align: center;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+  }
+  .ranked-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ranked-row:last-child { border-bottom: none; }
+  .rank-badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    background: #EEF1EC; color: var(--ink-soft);
+  }
+  .ranked-row:first-child .rank-badge { background: var(--amber); color: var(--amber-ink); }
+  .ranked-info { flex: 1; min-width: 0; }
+  .ranked-info .wid { font-size: 13.5px; font-weight: 600; }
+  .ranked-info .meta { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  .score-bar-track { width: 110px; height: 6px; background: #EAEDE7; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .score-bar-fill { height: 100%; background: var(--teal); }
+  .score-value { font-size: 13px; font-weight: 650; width: 42px; text-align: right; flex-shrink: 0; }
+ 
+  #error-banner {
+    display: none;
+    background: #FBEDEA; border: 1px solid #E8C2B8; color: var(--danger);
+    font-size: 12.5px; padding: 10px 12px; border-radius: 4px; margin-bottom: 14px;
+  }
+ 
+  .helper { font-size: 11.5px; color: var(--ink-soft); margin: -4px 0 12px; }
+  .api-base { font-size: 11.5px; color: var(--ink-soft); }
+  .api-base input { width: 190px; font-size: 11.5px; padding: 4px 6px; }
+</style>
+</head>
+<body>
+ 
+<header>
+  <div>
+    <h1>Smart Worker Allocation</h1>
+    <p>Ranks already-eligible candidates for one booking by predicted success probability.</p>
+  </div>
+  <div id="status">
+    <span class="dot"></span><span id="status-text">checking API…</span>
+  </div>
+</header>
+ 
+<main>
+  <section class="panel" id="form-panel">
+    <h2>Booking context</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="quantity">Quantity</label>
+        <input type="number" id="quantity" value="2" min="1">
+      </div>
+      <div class="field">
+        <label for="scheduled_hour">Hour (0–23)</label>
+        <input type="number" id="scheduled_hour" value="16" min="0" max="23">
+      </div>
+      <div class="field">
+        <label for="day_of_week">Day (0–6)</label>
+        <input type="number" id="day_of_week" value="0" min="0" max="6">
+      </div>
+    </div>
+ 
+    <h2 style="margin-top:18px;">Candidates</h2>
+    <p class="helper">Only workers who already passed eligibility checks (verified, available, correct skill) belong here.</p>
+    <div id="candidate-list"></div>
+    <button class="btn-add" onclick="addCandidateCard()">+ Add candidate</button>
+ 
+    <button class="btn-secondary" onclick="loadSample()">Load sample booking</button>
+    <button class="btn-primary" onclick="rankCandidates()">Rank candidates</button>
+ 
+    <div class="api-base" style="margin-top:14px;">
+      API base:
+      <input id="api-base" value="http://localhost:8001">
+    </div>
+  </section>
+ 
+  <section class="panel" id="results-panel">
+    <h2>Ranked candidates</h2>
+    <div id="error-banner"></div>
+    <div id="results"><div class="empty">Add candidates and click "Rank candidates" — or load the sample booking to try it instantly.</div></div>
+  </section>
+</main>
+ 
+<script>
+let candidateCount = 0;
+ 
+function addCandidateCard(values) {
+  candidateCount += 1;
+  const id = candidateCount;
+  const v = values || { worker_id: "W" + String(id).padStart(3, "0"), experience_years: 5, certifications_count: 1,
+                          has_certifications: 1, distance_km: 5, worker_skill_price: 500,
+                          worker_skill_price_type: "per_hour", platform_tenure_days: 365 };
+  const wrap = document.createElement("div");
+  wrap.className = "candidate-card";
+  wrap.dataset.id = id;
+  wrap.innerHTML = `
+    <button class="remove" onclick="this.parentElement.remove()" title="Remove candidate">×</button>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Worker ID</label>
+      <input class="c-worker_id" value="${v.worker_id}">
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Experience (yrs)</label><input class="c-experience_years" type="number" step="0.1" value="${v.experience_years}"></div>
+      <div class="field"><label>Certifications</label><input class="c-certifications_count" type="number" value="${v.certifications_count}"></div>
+      <div class="field"><label>Distance (km)</label><input class="c-distance_km" type="number" step="0.1" value="${v.distance_km}"></div>
+      <div class="field"><label>Price</label><input class="c-worker_skill_price" type="number" step="0.01" value="${v.worker_skill_price}"></div>
+      <div class="field">
+        <label>Price type</label>
+        <select class="c-worker_skill_price_type">
+          <option value="per_hour">per_hour</option>
+          <option value="per_visit">per_visit</option>
+          <option value="per_day">per_day</option>
+          <option value="fixed">fixed</option>
+        </select>
+      </div>
+      <div class="field"><label>Tenure (days)</label><input class="c-platform_tenure_days" type="number" value="${v.platform_tenure_days}"></div>
+    </div>
+  `;
+  wrap.querySelector(".c-worker_skill_price_type").value = v.worker_skill_price_type;
+  document.getElementById("candidate-list").appendChild(wrap);
+}
+ 
+function loadSample() {
+  document.getElementById("candidate-list").innerHTML = "";
+  candidateCount = 0;
+  addCandidateCard({ worker_id: "W00500", experience_years: 14.5, certifications_count: 4, has_certifications: 1,
+                      distance_km: 1.1, worker_skill_price: 520, worker_skill_price_type: "per_visit", platform_tenure_days: 1800 });
+  addCandidateCard({ worker_id: "W00643", experience_years: 9.1, certifications_count: 3, has_certifications: 1,
+                      distance_km: 4.57, worker_skill_price: 577.14, worker_skill_price_type: "fixed", platform_tenure_days: 2351 });
+  addCandidateCard({ worker_id: "W00312", experience_years: 5.0, certifications_count: 1, has_certifications: 1,
+                      distance_km: 9.8, worker_skill_price: 610, worker_skill_price_type: "per_hour", platform_tenure_days: 640 });
+  addCandidateCard({ worker_id: "W00999", experience_years: 2.0, certifications_count: 0, has_certifications: 0,
+                      distance_km: 18.2, worker_skill_price: 690, worker_skill_price_type: "per_hour", platform_tenure_days: 120 });
+}
+ 
+function readCandidates() {
+  return [...document.querySelectorAll(".candidate-card")].map(card => ({
+    worker_id: card.querySelector(".c-worker_id").value,
+    experience_years: parseFloat(card.querySelector(".c-experience_years").value),
+    certifications_count: parseInt(card.querySelector(".c-certifications_count").value, 10),
+    has_certifications: parseInt(card.querySelector(".c-certifications_count").value, 10) > 0 ? 1 : 0,
+    distance_km: parseFloat(card.querySelector(".c-distance_km").value),
+    worker_skill_price: parseFloat(card.querySelector(".c-worker_skill_price").value),
+    worker_skill_price_type: card.querySelector(".c-worker_skill_price_type").value,
+    platform_tenure_days: parseInt(card.querySelector(".c-platform_tenure_days").value, 10),
+  }));
+}
+ 
+function showError(msg) {
+  const el = document.getElementById("error-banner");
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
+}
+ 
+async function rankCandidates() {
+  showError("");
+  const candidates = readCandidates();
+  if (candidates.length === 0) {
+    showError("Add at least one candidate first.");
+    return;
+  }
+  const base = document.getElementById("api-base").value.replace(/\/$/, "");
+  const payload = {
+    booking_id: "DEMO_" + Date.now(),
+    quantity: parseInt(document.getElementById("quantity").value, 10),
+    scheduled_hour: parseInt(document.getElementById("scheduled_hour").value, 10),
+    day_of_week: parseInt(document.getElementById("day_of_week").value, 10),
+    candidates,
+  };
+ 
+  const resultsEl = document.getElementById("results");
+  resultsEl.innerHTML = '<div class="empty">Ranking…</div>';
+ 
+  try {
+    const res = await fetch(`${base}/rank-candidates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      throw new Error(detail.detail || `API returned ${res.status}`);
+    }
+    const data = await res.json();
+    renderResults(data.rankedWorkers, candidates);
+  } catch (err) {
+    resultsEl.innerHTML = '<div class="empty">Ranking failed — see message above.</div>';
+    showError(`Can't reach the ranking service: ${err.message}. Check it's running (uvicorn api:app --port 8001) and the API base URL is correct.`);
+  }
+}
+ 
+function renderResults(ranked, originalCandidates) {
+  const byId = Object.fromEntries(originalCandidates.map(c => [c.worker_id, c]));
+  const maxScore = Math.max(...ranked.map(r => r.score), 0.01);
+  const el = document.getElementById("results");
+  el.innerHTML = ranked.map(r => {
+    const c = byId[r.worker_id] || {};
+    const pct = Math.round((r.score / maxScore) * 100);
+    return `
+      <div class="ranked-row">
+        <div class="rank-badge">${r.rank}</div>
+        <div class="ranked-info">
+          <div class="wid">${r.worker_id}</div>
+          <div class="meta">${c.distance_km ?? "–"} km away · ${c.experience_years ?? "–"} yrs experience · ${c.certifications_count ?? "–"} certifications</div>
+        </div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+        <div class="score-value">${r.score.toFixed(2)}</div>
+      </div>
+    `;
+  }).join("");
+}
+ 
+async function checkHealth() {
+  const base = document.getElementById("api-base").value.replace(/\/$/, "");
+  const statusEl = document.getElementById("status");
+  const textEl = document.getElementById("status-text");
+  try {
+    const res = await fetch(`${base}/health`);
+    const data = await res.json();
+    if (data.model_loaded !== false && data.status === "ok") {
+      statusEl.className = "ok";
+      textEl.textContent = `API connected · model: ${data.model_name}`;
+    } else {
+      statusEl.className = "down";
+      textEl.textContent = "API reachable, model not loaded";
+    }
+  } catch {
+    statusEl.className = "down";
+    textEl.textContent = "API not reachable";
+  }
+}
+ 
+loadSample();
+checkHealth();
+setInterval(checkHealth, 8000);
+</script>
+ 
+</body>
+</html>
+ 
