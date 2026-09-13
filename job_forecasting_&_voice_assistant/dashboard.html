@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sahakar Seva — Demand Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFEAE0;
+    --paper-raised:#F6F2E8;
+    --ink:#1F3A34;
+    --ink-soft:#3E5A53;
+    --text:#2B2723;
+    --text-mute:#6B655B;
+    --line:#C9C0AE;
+    --accent:#C97B2E;
+    --accent-soft:#E6C79A;
+    --sage:#6B8F84;
+    --heat-0:#F6F2E8;
+    --heat-1:#D9E4DE;
+    --heat-2:#AFC9BE;
+    --heat-3:#6B8F84;
+    --heat-4:#3E5A53;
+    --heat-5:#1F3A34;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+  }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 28px 80px;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:3px solid var(--ink);
+    padding:36px 0 18px;
+    gap:24px;
+    flex-wrap:wrap;
+  }
+  .masthead h1{
+    font-family:'Newsreader', serif;
+    font-weight:500;
+    font-size:2.6rem;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--ink);
+  }
+  .masthead p{
+    margin:6px 0 0;
+    color:var(--text-mute);
+    font-size:0.98rem;
+    max-width:46ch;
+  }
+  .status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:0.86rem;
+    color:var(--text-mute);
+    padding-bottom:6px;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:#B5493B;
+    flex-shrink:0;
+    transition:background .2s;
+  }
+  .dot.live{ background:#4C7A5D; }
+
+  /* ---------- Control strip ---------- */
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px 22px;
+    align-items:flex-end;
+    padding:22px 0;
+    border-bottom:1px solid var(--line);
+    margin-bottom:26px;
+  }
+  .field{ display:flex; flex-direction:column; gap:5px; min-width:120px; }
+  .field label{
+    font-size:0.76rem;
+    color:var(--text-mute);
+  }
+  .field input, .field select{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.88rem;
+    padding:7px 9px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:var(--paper-raised);
+    color:var(--text);
+  }
+  .field.wide{ flex:1 1 320px; min-width:260px; }
+  .field.wide input{ font-family:'IBM Plex Mono', monospace; }
+
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:500;
+    font-size:0.88rem;
+    padding:9px 18px;
+    border:1px solid var(--ink);
+    border-radius:2px;
+    background:var(--ink);
+    color:var(--paper-raised);
+    cursor:pointer;
+  }
+  button:hover{ background:var(--ink-soft); }
+  button.ghost{
+    background:transparent;
+    color:var(--ink);
+  }
+  button.ghost:hover{ background:var(--paper-raised); }
+
+  .note{
+    font-size:0.78rem;
+    color:var(--text-mute);
+    margin-top:4px;
+  }
+
+  /* ---------- Layout: register + lookup ---------- */
+  .grid-layout{
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:34px;
+    align-items:start;
+  }
+  @media (max-width:860px){
+    .grid-layout{ grid-template-columns:1fr; }
+  }
+
+  .panel-title{
+    font-family:'Newsreader', serif;
+    font-size:1.3rem;
+    font-weight:500;
+    color:var(--ink);
+    margin:0 0 4px;
+  }
+  .panel-sub{
+    font-size:0.84rem;
+    color:var(--text-mute);
+    margin:0 0 16px;
+  }
+
+  /* register table */
+  .register{
+    border-collapse:collapse;
+    width:100%;
+    font-size:0.82rem;
+  }
+  .register th, .register td{
+    border:1px solid var(--line);
+    padding:0;
+    text-align:center;
+  }
+  .register thead th{
+    background:var(--paper-raised);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:500;
+    font-size:0.72rem;
+    color:var(--ink-soft);
+    padding:8px 4px;
+    writing-mode:horizontal-tb;
+  }
+  .register td.loc-label{
+    text-align:left;
+    padding:8px 10px;
+    font-weight:500;
+    background:var(--paper-raised);
+    color:var(--ink);
+    white-space:nowrap;
+    font-size:0.78rem;
+  }
+  .cell{
+    position:relative;
+    padding:10px 4px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .cell .n{ font-weight:500; }
+  .cell .w{
+    display:block;
+    font-size:0.66rem;
+    opacity:0.75;
+    margin-top:1px;
+  }
+  .cell:hover{ outline:2px solid var(--accent); outline-offset:-2px; }
+
+  .legend{
+    display:flex; align-items:center; gap:8px;
+    margin-top:14px; font-size:0.76rem; color:var(--text-mute);
+  }
+  .legend .swatches{ display:flex; }
+  .legend .sw{ width:20px; height:12px; }
+
+  /* lookup / duty slip */
+  .slip{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-top:3px solid var(--accent);
+    padding:22px;
+  }
+  .slip .field{ margin-bottom:14px; width:100%; }
+  .slip .field select{ width:100%; }
+  .result{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+  }
+  .result .big{
+    font-family:'Newsreader', serif;
+    font-size:2.4rem;
+    color:var(--ink);
+    line-height:1;
+    margin:0;
+  }
+  .result .big span{ font-size:1rem; color:var(--text-mute); font-family:'IBM Plex Sans', sans-serif; }
+  .result .line{
+    display:flex; justify-content:space-between;
+    font-size:0.86rem; padding:6px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .result .line:last-child{ border-bottom:none; }
+  .result .line .k{ color:var(--text-mute); }
+  .result .line .v{ font-family:'IBM Plex Mono', monospace; color:var(--text); }
+
+  .empty{
+    color:var(--text-mute);
+    font-size:0.86rem;
+    padding:40px 20px;
+    text-align:center;
+    border:1px dashed var(--line);
+    background:var(--paper-raised);
+  }
+  .empty code{
+    background:var(--paper);
+    padding:2px 6px;
+    border-radius:2px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  footer{
+    margin-top:50px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+    font-size:0.78rem;
+    color:var(--text-mute);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <h1>Sahakar Seva — Demand Register</h1>
+      <p>Daily forecast of household &amp; community service bookings across cooperative zones, for duty planning.</p>
+    </div>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Not connected</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="field wide">
+      <label for="apiUrl">Model API base URL (from your ngrok tunnel)</label>
+      <input id="apiUrl" type="text" placeholder="https://xxxx-xx-xx-xx-xx.ngrok-free.app" />
+    </div>
+    <div class="field">
+      <label for="dayOfWeek">Day</label>
+      <select id="dayOfWeek">
+        <option value="0">Monday</option>
+        <option value="1">Tuesday</option>
+        <option value="2">Wednesday</option>
+        <option value="3">Thursday</option>
+        <option value="4">Friday</option>
+        <option value="5" selected>Saturday</option>
+        <option value="6">Sunday</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="month">Month</label>
+      <select id="month"></select>
+    </div>
+    <div class="field">
+      <label for="temp">Temp (°C)</label>
+      <input id="temp" type="number" value="32" step="0.5" />
+    </div>
+    <div class="field">
+      <label for="rain">Rainfall (mm)</label>
+      <input id="rain" type="number" value="20" step="1" />
+    </div>
+    <div class="field">
+      <button id="loadBtn">Load register</button>
+    </div>
+  </div>
+
+  <div class="grid-layout">
+
+    <div>
+      <p class="panel-title">Zone × service forecast</p>
+      <p class="panel-sub">Predicted bookings for the selected day, with the workers that scenario needs. Click a cell to send it to the duty slip.</p>
+      <div id="registerHolder">
+        <div class="empty">
+          Enter your API URL above and click <strong>Load register</strong> to pull today's forecast.<br>
+          Get the URL by running the Kaggle notebook — it prints something like <code>https://xxxx.ngrok-free.app</code>.
+        </div>
+      </div>
+      <div class="legend" id="legendHolder" style="display:none;">
+        <span>Low demand</span>
+        <span class="swatches">
+          <span class="sw" style="background:var(--heat-0)"></span>
+          <span class="sw" style="background:var(--heat-1)"></span>
+          <span class="sw" style="background:var(--heat-2)"></span>
+          <span class="sw" style="background:var(--heat-3)"></span>
+          <span class="sw" style="background:var(--heat-4)"></span>
+          <span class="sw" style="background:var(--heat-5)"></span>
+        </span>
+        <span>High demand</span>
+      </div>
+    </div>
+
+    <div>
+      <p class="panel-title">Duty slip</p>
+      <p class="panel-sub">Single lookup for one zone and service.</p>
+      <div class="slip">
+        <div class="field">
+          <label for="lookupLoc">Zone</label>
+          <select id="lookupLoc"><option>— load register first —</option></select>
+        </div>
+        <div class="field">
+          <label for="lookupSvc">Service</label>
+          <select id="lookupSvc"><option>— load register first —</option></select>
+        </div>
+        <button id="lookupBtn" style="width:100%;">Predict</button>
+
+        <div class="result" id="resultHolder" style="display:none;">
+          <p class="big" id="resultBookings">0<span> jobs / day</span></p>
+          <div class="line"><span class="k">Zone</span><span class="v" id="resLoc">—</span></div>
+          <div class="line"><span class="k">Service</span><span class="v" id="resSvc">—</span></div>
+          <div class="line"><span class="k">Workers to deploy</span><span class="v" id="resWorkers">—</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>SIH26089 — Cooperative Gig Services Platform · Ministry of Cooperation</span>
+    <span>Forecast model: XGBoost, trained on simulated booking history</span>
+  </footer>
+
+</div>
+
+<script>
+  const monthSelect = document.getElementById('month');
+  const monthNames = ["January","February","March","April","May","June",
+                       "July","August","September","October","November","December"];
+  monthNames.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1;
+    opt.textContent = m;
+    if (i + 1 === 7) opt.selected = true;
+    monthSelect.appendChild(opt);
+  });
+
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+
+  function setStatus(live, text){
+    statusDot.classList.toggle('live', live);
+    statusText.textContent = text;
+  }
+
+  function apiBase(){
+    return document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+  }
+
+  function heatClass(bookings, maxBookings){
+    const ratio = maxBookings > 0 ? bookings / maxBookings : 0;
+    if (ratio < 0.15) return { bg: 'var(--heat-0)', fg: 'var(--text)' };
+    if (ratio < 0.35) return { bg: 'var(--heat-1)', fg: 'var(--text)' };
+    if (ratio < 0.55) return { bg: 'var(--heat-2)', fg: 'var(--text)' };
+    if (ratio < 0.75) return { bg: 'var(--heat-3)', fg: '#fff' };
+    if (ratio < 0.9)  return { bg: 'var(--heat-4)', fg: '#fff' };
+    return { bg: 'var(--heat-5)', fg: '#fff' };
+  }
+
+  let lastData = null;
+
+  async function loadRegister(){
+    const base = apiBase();
+    if (!base){
+      alert('Enter the API URL from your Kaggle/ngrok notebook first.');
+      return;
+    }
+    setStatus(false, 'Connecting…');
+
+    const params = new URLSearchParams({
+      day_of_week: document.getElementById('dayOfWeek').value,
+      month: document.getElementById('month').value,
+      temp_c: document.getElementById('temp').value,
+      rainfall_mm: document.getElementById('rain').value,
+    });
+
+    try {
+      const res = await fetch(`${base}/heatmap?${params.toString()}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      lastData = data;
+      renderRegister(data);
+      populateLookup(data);
+      setStatus(true, 'Connected');
+    } catch (err) {
+      setStatus(false, 'Could not reach API');
+      document.getElementById('registerHolder').innerHTML =
+        `<div class="empty">Could not reach the API at <code>${base}</code>.<br>
+         Check: the notebook cell is still running · the URL was copied exactly (include https://, no trailing slash) ·
+         and if this is a fresh ngrok URL, open <code>${base}</code> directly in a new browser tab once first
+         and click "Visit Site" to clear ngrok's warning page.<br>
+         <span style="color:var(--accent)">${err.message}</span></div>`;
+    }
+  }
+
+  function renderRegister(data){
+    const results = data.results;
+    const localities = [...new Set(results.map(r => r.locality))];
+    const services = [...new Set(results.map(r => r.service_type))];
+    const maxBookings = Math.max(...results.map(r => r.predicted_bookings));
+
+    const lookup = {};
+    results.forEach(r => { lookup[`${r.locality}__${r.service_type}`] = r; });
+
+    let html = '<table class="register"><thead><tr><th></th>';
+    services.forEach(s => { html += `<th>${s}</th>`; });
+    html += '</tr></thead><tbody>';
+
+    localities.forEach(loc => {
+      html += `<tr><td class="loc-label">${loc}</td>`;
+      services.forEach(svc => {
+        const r = lookup[`${loc}__${svc}`];
+        const { bg, fg } = heatClass(r.predicted_bookings, maxBookings);
+        html += `<td class="cell" style="background:${bg}; color:${fg};"
+                    data-loc="${loc}" data-svc="${svc}"
+                    data-bookings="${r.predicted_bookings}" data-workers="${r.recommended_workers}">
+                    <span class="n">${r.predicted_bookings}</span>
+                    <span class="w">${r.recommended_workers}w</span>
+                  </td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    document.getElementById('registerHolder').innerHTML = html;
+    document.getElementById('legendHolder').style.display = 'flex';
+
+    document.querySelectorAll('.cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        document.getElementById('lookupLoc').value = cell.dataset.loc;
+        document.getElementById('lookupSvc').value = cell.dataset.svc;
+        showResult(cell.dataset.loc, cell.dataset.svc, cell.dataset.bookings, cell.dataset.workers);
+      });
+    });
+  }
+
+  function populateLookup(data){
+    const localities = [...new Set(data.results.map(r => r.locality))];
+    const services = [...new Set(data.results.map(r => r.service_type))];
+
+    const locSelect = document.getElementById('lookupLoc');
+    const svcSelect = document.getElementById('lookupSvc');
+    locSelect.innerHTML = localities.map(l => `<option value="${l}">${l}</option>`).join('');
+    svcSelect.innerHTML = services.map(s => `<option value="${s}">${s}</option>`).join('');
+  }
+
+  function showResult(loc, svc, bookings, workers){
+    document.getElementById('resultHolder').style.display = 'block';
+    document.getElementById('resultBookings').innerHTML = `${bookings}<span> jobs / day</span>`;
+    document.getElementById('resLoc').textContent = loc;
+    document.getElementById('resSvc').textContent = svc;
+    document.getElementById('resWorkers').textContent = workers;
+  }
+
+  async function runLookup(){
+    const base = apiBase();
+    if (!base || !lastData){
+      alert('Load the register first.');
+      return;
+    }
+    const loc = document.getElementById('lookupLoc').value;
+    const svc = document.getElementById('lookupSvc').value;
+
+    try {
+      const res = await fetch(`${base}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({
+          locality: loc,
+          service_type: svc,
+          day_of_week: Number(document.getElementById('dayOfWeek').value),
+          month: Number(document.getElementById('month').value),
+          temp_c: Number(document.getElementById('temp').value),
+          rainfall_mm: Number(document.getElementById('rain').value),
+        }),
+      });
+      const data = await res.json();
+      if (data.error){ alert(data.error); return; }
+      showResult(data.locality, data.service_type, data.predicted_bookings, data.recommended_workers);
+    } catch (err) {
+      alert(`Prediction failed: ${err.message}`);
+    }
+  }
+
+  document.getElementById('loadBtn').addEventListener('click', loadRegister);
+  document.getElementById('lookupBtn').addEventListener('click', runLookup);
+</script>
+</body>
+</html>
