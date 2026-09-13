@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sahakar Seva — Voice Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFEAE0; --paper-raised:#F6F2E8;
+    --ink:#1F3A34; --ink-soft:#3E5A53;
+    --text:#2B2723; --text-mute:#6B655B;
+    --line:#C9C0AE; --accent:#C97B2E;
+    --crisis:#B5493B; --live:#4C7A5D; --listening:#2563A8;
+    --processing:#B4791F;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif; line-height:1.5;
+  }
+  .wrap{ max-width:640px; margin:0 auto; padding:0 24px 40px; }
+
+  .masthead{
+    border-bottom:3px solid var(--ink); padding:28px 0 16px; margin-bottom:18px;
+  }
+  .masthead h1{ font-family:'Newsreader', serif; font-weight:500; font-size:2.1rem; margin:0; color:var(--ink); }
+  .masthead p{ margin:6px 0 0; color:var(--text-mute); font-size:0.92rem; }
+
+  .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:16px; }
+  .field label{ font-size:0.75rem; color:var(--text-mute); }
+  .field input{
+    font-family:'IBM Plex Mono', monospace; font-size:0.86rem;
+    padding:8px 10px; border:1px solid var(--line); border-radius:2px;
+    background:var(--paper-raised); color:var(--text);
+  }
+
+  .lang-row{ display:flex; flex-wrap:wrap; gap:6px; }
+  .lang-chip{
+    font-family:'IBM Plex Sans', sans-serif; font-size:0.78rem;
+    padding:6px 11px; border-radius:14px; border:1px solid var(--line);
+    background:var(--paper-raised); color:var(--text); cursor:pointer;
+  }
+  .lang-chip.active{ background:var(--ink); border-color:var(--ink); color:var(--paper-raised); font-weight:600; }
+
+  .stage{
+    display:flex; flex-direction:column; align-items:center;
+    padding:26px 0 10px;
+    border-bottom:1px solid var(--line); margin-bottom:20px;
+  }
+  .ring{
+    width:96px; height:96px; border-radius:50%;
+    border:3px solid var(--text-mute); opacity:0.4;
+    display:flex; align-items:center; justify-content:center;
+    transition: border-color .2s, opacity .2s;
+  }
+  .ring .core{
+    width:78px; height:78px; border-radius:50%;
+    background:var(--text-mute); display:flex; align-items:center; justify-content:center;
+    transition: background-color .2s;
+  }
+  .core span{ color:#fff; font-family:'Newsreader', serif; font-size:1.1rem; }
+  .status-label{
+    margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:0.78rem;
+    letter-spacing:0.06em; color:var(--text-mute); text-transform:uppercase;
+  }
+
+  .panel-label{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-mute); margin-bottom:6px; }
+  .box{
+    background:var(--paper-raised); border:1px solid var(--line); border-radius:4px;
+    padding:14px; min-height:56px; margin-bottom:16px; font-size:0.92rem; line-height:1.5;
+  }
+  .box.ai{ border-left:3px solid var(--accent); }
+  .box.ai.crisis{ border-left-color:var(--crisis); }
+
+  .controls{ display:flex; gap:12px; margin-top:6px; }
+  button{
+    flex:1; font-family:'IBM Plex Sans', sans-serif; font-weight:500; font-size:0.9rem;
+    padding:12px 18px; border-radius:4px; border:1px solid transparent; cursor:pointer;
+  }
+  .btn-start{ background:var(--listening); color:#fff; }
+  .btn-stop{ background:var(--crisis); color:#fff; }
+  button:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .empty{
+    color:var(--text-mute); font-size:0.86rem; padding:16px 0; text-align:center;
+  }
+  .empty code{ background:var(--paper); padding:2px 6px; border-radius:2px; font-family:'IBM Plex Mono', monospace; }
+
+  footer{
+    margin-top:24px; padding-top:14px; border-top:1px solid var(--line);
+    font-size:0.76rem; color:var(--text-mute); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Sahakar Seva — Voice Assistant</h1>
+    <p>Speak your question, get a spoken answer back.</p>
+  </div>
+
+  <div class="field">
+    <label for="apiUrl">Model API base URL (from your ngrok tunnel)</label>
+    <input id="apiUrl" type="text" placeholder="https://xxxx-xx-xx-xx-xx.ngrok-free.app" />
+  </div>
+
+  <div class="field">
+    <label>Language</label>
+    <div class="lang-row" id="langRow"></div>
+  </div>
+
+  <div class="stage">
+    <div class="ring" id="ring">
+      <div class="core" id="core"><span id="coreLabel">AI</span></div>
+    </div>
+    <div class="status-label" id="statusLabel">IDLE</div>
+  </div>
+
+  <div class="panel-label">User transcript</div>
+  <div class="box" id="userBox">Tap "Start Listening" to begin…</div>
+
+  <div class="panel-label">AI response</div>
+  <div class="box ai" id="aiBox">The response will appear (and be spoken) here…</div>
+
+  <div class="controls">
+    <button class="btn-start" id="startBtn">Start Listening</button>
+    <button class="btn-stop" id="stopBtn">Stop</button>
+  </div>
+
+  <div class="empty" id="unsupportedHint" style="display:none;">
+    This browser doesn't support the Web Speech API for microphone input. Try Chrome or Edge on desktop or Android.
+  </div>
+
+  <footer>Sahakar Seva — Cooperative Gig Services Platform</footer>
+</div>
+
+<script>
+  const LANGUAGES = [
+    { label: 'English', speechCode: 'en-US', name: 'English' },
+    { label: 'हिंदी', speechCode: 'hi-IN', name: 'Hindi' },
+    { label: 'मराठी', speechCode: 'mr-IN', name: 'Marathi' },
+    { label: 'தமிழ்', speechCode: 'ta-IN', name: 'Tamil' },
+    { label: 'తెలుగు', speechCode: 'te-IN', name: 'Telugu' },
+    { label: 'বাংলা', speechCode: 'bn-IN', name: 'Bengali' },
+    { label: 'ગુજરાતી', speechCode: 'gu-IN', name: 'Gujarati' },
+    { label: 'ಕನ್ನಡ', speechCode: 'kn-IN', name: 'Kannada' },
+  ];
+  let selectedLanguage = LANGUAGES[0];
+
+  const langRow = document.getElementById('langRow');
+  LANGUAGES.forEach((lng) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'lang-chip' + (lng.speechCode === selectedLanguage.speechCode ? ' active' : '');
+    chip.textContent = lng.label;
+    chip.addEventListener('click', () => {
+      selectedLanguage = lng;
+      document.querySelectorAll('.lang-chip').forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+    langRow.appendChild(chip);
+  });
+
+  const ring = document.getElementById('ring');
+  const core = document.getElementById('core');
+  const statusLabel = document.getElementById('statusLabel');
+  const userBox = document.getElementById('userBox');
+  const aiBox = document.getElementById('aiBox');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  const STATUS_COLORS = {
+    idle: 'var(--text-mute)',
+    listening: 'var(--listening)',
+    processing: 'var(--processing)',
+    speaking: 'var(--live)',
+    error: 'var(--crisis)',
+  };
+
+  function setStage(state, label){
+    const color = STATUS_COLORS[state] || STATUS_COLORS.idle;
+    ring.style.borderColor = color;
+    ring.style.opacity = state === 'listening' ? '1' : '0.45';
+    core.style.backgroundColor = color;
+    statusLabel.textContent = label.toUpperCase();
+  }
+
+  function apiBase(){
+    return document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+  }
+
+  const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+
+  if (!SpeechRecognitionAPI) {
+    document.getElementById('unsupportedHint').style.display = 'block';
+    startBtn.disabled = true;
+  } else {
+    recognizer = new SpeechRecognitionAPI();
+    recognizer.interimResults = false;
+    recognizer.maxAlternatives = 1;
+
+    recognizer.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      userBox.textContent = transcript;
+      askBackend(transcript);
+    };
+
+    recognizer.onerror = (event) => {
+      setStage('error', 'Mic error');
+      aiBox.textContent = `Speech recognition error: ${event.error}`;
+    };
+
+    recognizer.onend = () => {
+      if (statusLabel.textContent === 'LISTENING') {
+        setStage('idle', 'Idle');
+      }
+    };
+  }
+
+  function startListening(){
+    const base = apiBase();
+    if (!base){
+      alert('Enter the API URL from your Kaggle/ngrok notebook first.');
+      return;
+    }
+    if (!recognizer) return;
+    userBox.textContent = 'Listening…';
+    aiBox.textContent = 'Awaiting your question…';
+    setStage('listening', 'Listening');
+    recognizer.lang = selectedLanguage.speechCode;
+    try { recognizer.start(); } catch (e) { /* already started */ }
+  }
+
+  function stopListening(){
+    if (recognizer) recognizer.abort();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setStage('idle', 'Stopped');
+  }
+
+  async function askBackend(question){
+    const base = apiBase();
+    setStage('processing', 'Processing');
+
+    try {
+      const res = await fetch(`${base}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({ question, language: selectedLanguage.name }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      aiBox.textContent = data.answer;
+      aiBox.classList.toggle('crisis', !!data.escalated);
+      setStage('speaking', 'Speaking');
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(data.answer);
+        utter.lang = selectedLanguage.speechCode;
+        utter.onend = () => setStage('idle', 'Ready');
+        window.speechSynthesis.speak(utter);
+      } else {
+        setStage('idle', 'Ready');
+      }
+    } catch (err) {
+      setStage('error', 'Server error');
+      aiBox.textContent =
+        `Could not reach the API at ${base}. Check the notebook is still running, the URL is exact ` +
+        `(include https://, no trailing slash), and if it's a fresh ngrok URL, open it in a new tab once ` +
+        `and click "Visit Site". (${err.message})`;
+    }
+  }
+
+  startBtn.addEventListener('click', startListening);
+  stopBtn.addEventListener('click', stopListening);
+</script>
+</body>
+</html>
